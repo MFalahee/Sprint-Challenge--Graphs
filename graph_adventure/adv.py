@@ -41,7 +41,7 @@ def bfs(Graph, Room):
     visited = set()
     queue.enqueue([Room])
 
-    while len(queue) > 0:
+    while queue.size() > 0:
         route = queue.dequeue()
         room = route[-1]
 
@@ -54,6 +54,13 @@ def bfs(Graph, Room):
                 #if a neighbor is ?, perfect. Return the route to this room.
                 if graph[room][direction] is '?':
                     return route
+                
+                #if it's not ?, it's a possible route to a room with an undiscovered room. Add it to the queue.
+                else:
+                    route_copy = route.copy()
+                    next_room = graph[room][direction]
+                    route_copy.append(next_room)
+                    queue.enqueue(route_copy)
 
 
 
@@ -102,7 +109,10 @@ while len(graph) != target_length:
 
     #if we are at a deadend, what do we do? We backtrack, and find the closest room with a unexplored route
     else:
-        break
+        
+        #use BFS to find the closest room with unexplored route.
+        route = bfs(graph, currentRoom)
+        
 
 
 
