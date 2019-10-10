@@ -20,15 +20,91 @@ world.loadGraph(roomGraph)
 world.printRooms()
 player = Player("Name", world.startingRoom)
 
+target_length = len(roomGraph)
+print('Target # of explored rooms: ', target_length)
 
 # FILL THIS IN
-# traversalPath = ['n', 's']
+
 traversalPath = []
+graph = {}
 
-def findPath(starting_room, world):
-    located_rooms = set()
+prevRoom = None
+prevMove = None
+opp_moves = {'n' : 's', 's' : 'n', 'e': 'w', 'w': 'e'}
 
-    
+#Standard-ish bfs. Used when we hit a deadend and need to find the last room with a '?'
+#This will output a path to a room to start exploring again, but we'll need to translate it 
+#into directions again for the traversalPath
+def bfs(Graph, Room):
+
+    queue = Queue()
+    visited = set()
+    queue.enqueue([Room])
+
+    while len(queue) > 0:
+        route = queue.dequeue()
+        room = route[-1]
+
+        if room not in visited:
+            visited.add(room)
+
+            #if we haven't visited it, check all it's neighbors
+            for direction in graph[room]:
+                
+                #if a neighbor is ?, perfect. Return the route to this room.
+                if graph[room][direction] is '?':
+                    return route
+
+
+
+
+while len(graph) != target_length:
+    # Current room, and set up our possible moves from the room
+    currentRoom = player.currentRoom.id
+    possible_moves = []
+
+    if currentRoom not in graph:
+        #add currentRoom to graph, with exit directions
+        graph[currentRoom] = {direction: '?' for direction in world.rooms[currentRoom].getExits()}
+        print(graph[currentRoom])
+
+    if prevRoom is not None and prevMove is not None:
+        #set the last room to have current room in this direction.
+        graph[prevRoom][prevMove] = currentRoom
+        #now set this room's direction to have the last room
+        graph[currentRoom][opp_moves[prevMove]] = prevRoom
+
+
+    #if there is an unexplored direction off of the current room, it's not a dead end
+    if '?' in graph[currentRoom].values():
+        deadend = False
+    else:
+        deadend = True
+
+    #if it's not a dead end, lets go in an unexplored direction.
+    if not deadend:
+        #Grabbing all of the unexplored routes off of the current room
+        for direction in graph[currentRoom]:
+            if graph[currentRoom][direction] is '?':
+                possible_moves.append(direction)
+
+        #Pick a random one
+        move = random.choice(possible_moves)
+
+        #Move, and add it to our path
+        traversalPath.append(move)
+
+        #Move the player, which will help change current room in the next loop
+        player.travel(move)
+
+        prevRoom = currentRoom
+        prevMove = move
+
+    #if we are at a deadend, what do we do? We backtrack, and find the closest room with a unexplored route
+    else:
+        break
+
+
 
 # TRAVERSAL TEST
 visited_rooms = set()
