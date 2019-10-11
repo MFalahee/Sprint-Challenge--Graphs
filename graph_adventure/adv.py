@@ -1,6 +1,7 @@
 from room import Room
 from player import Player
 from world import World
+from util import Stack, Queue #might be useful
 
 import random
 
@@ -19,9 +20,138 @@ world.loadGraph(roomGraph)
 world.printRooms()
 player = Player("Name", world.startingRoom)
 
+target_length = len(roomGraph)
+print('Target # of explored rooms: ', target_length)
 
 # FILL THIS IN
-traversalPath = ['n', 's']
+
+traversalPath = []
+# cache = dict()
+graph = {}
+
+prevRoom = None
+prevMove = None
+opp_moves = {'n' : 's', 's' : 'n', 'e': 'w', 'w': 'e'}
+
+# Standard-ish bfs. Used when we hit a deadend and need to find the last room with a '?'
+# This will output a path to a room to start exploring again, but we'll need to translate it 
+# into directions again for the traversalPath
+def bfs(Graph, Room):
+
+    queue = Queue()
+    visited = set()
+    queue.enqueue([Room])
+
+    while queue.size() > 0:
+        route = queue.dequeue()
+        room = route[-1]
+
+        if room not in visited:
+            visited.add(room)
+
+            #if we haven't visited it, check all it's neighbors
+            for direction in graph[room]:
+                
+                #if a neighbor is ?, perfect. Return the route to this room.
+                if graph[room][direction] is '?':
+                    return route
+                
+                #if it's not ?, it's a possible route to a room with an undiscovered room. Add it to the queue.
+                else:
+                    route_copy = route.copy()
+                    next_room = graph[room][direction]
+                    route_copy.append(next_room)
+                    queue.enqueue(route_copy)
+
+# count = 0
+
+while len(traversalPath) >= 970 or traversalPath == []:
+
+    # i threw this loop on last minute to try to find a lower path. It's not the 
+    # prettiest solution to this problem, but it does optimize the end result pretty well.
+    player = Player("Name", world.startingRoom)
+    graph = {}
+    traversalPath = []
+    prevRoom = None
+    prevMove = None
+
+
+    while len(graph) != target_length:
+        # Current room, and set up our possible moves from the room
+        currentRoom = player.currentRoom.id
+        possible_moves = []
+
+        # print('\n\n\nTOP OF THE LOOP ============')
+        # print('CURRENT ROOM', currentRoom)
+        # print('PREVROOM + PREVMOVE', prevRoom, prevMove)
+
+        if currentRoom not in graph:
+            #add currentRoom to graph, with exit directions
+            graph[currentRoom] = {direction: '?' for direction in world.rooms[currentRoom].getExits()}
+            # print(graph[currentRoom])
+
+        if prevRoom is not None and prevMove is not None and prevRoom != currentRoom:
+            #set the last room to have current room in this direction.
+            graph[prevRoom][prevMove] = currentRoom
+            #now set this room's direction to have the last room
+            graph[currentRoom][opp_moves[prevMove]] = prevRoom
+
+
+        #if there is an unexplored direction off of the current room, it's not a dead end
+        if '?' in graph[currentRoom].values():
+            deadend = False
+        else:
+            deadend = True
+            # print(currentRoom)
+            # print(roomGraph[currentRoom])
+
+        #if it's not a dead end, lets go in an unexplored direction.
+        if deadend is False:
+            #Grabbing all of the unexplored routes off of the current room
+            for direction in graph[currentRoom]:
+                if graph[currentRoom][direction] is '?':
+                    possible_moves.append(direction)
+
+            #Pick a random one
+            move = random.choice(possible_moves)
+
+            #Move, and add it to our path
+            traversalPath.append(move)
+
+            #Move the player, which will help change current room in the next loop
+            player.travel(move)
+
+            prevRoom = currentRoom
+            prevMove = move
+
+        #if we are at a deadend, what do we do? We backtrack, and find the closest room with an unexplored route
+        else:
+            #use BFS to find the closest room with unexplored route. Will return a list of roomIDs
+            route = bfs(graph, currentRoom)
+
+            # because the route doesn't actually move us, we can simply move towards the rooms designated in
+            # it in order to keep adding to our traversalPath
+            if route is not None:
+                # take off the first room (which is the current one)
+                route.pop(0)
+                for room in route:
+                    moved = False
+                    # print('Inside: ', player.currentRoom.id)
+                    # print('Looking for: ', room)
+                    for direction in graph[player.currentRoom.id]:
+                        if moved is False:
+                            # print('ROOM to', direction, 'IS: ', graph[player.currentRoom.id][direction])
+                            if graph[player.currentRoom.id][direction] is room:
+                                # print('MOVING ', direction, 'TO ROOM: ', graph[player.currentRoom.id][direction])
+                                prevMove = direction
+                                prevRoom = player.currentRoom.id
+                                traversalPath.append(direction)
+                                player.travel(direction)
+                                # print('new current room after travel: ', player.currentRoom.id)
+                                moved = True
+
+    # cache[count] = traversalPath
+    # count += 1
 
 
 # TRAVERSAL TEST
